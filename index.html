@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ระบบเช็คชื่อ ประธาน กปน. และ รปภ.</title>
+    <title>Dashboard สถานะการรายงานตัว กปน.</title>
     
     <!-- โหลด Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -17,107 +17,80 @@
     <style>
         body {
             font-family: 'Sarabun', sans-serif;
-            background-color: #F5F3FF; /* สีพื้นหลังม่วงอ่อน */
-            overflow: hidden; /* ล็อคไม่ให้หน้าจอหลักเลื่อน */
+            background-color: #F3F4F6;
         }
-        
-        /* Checkbox Style */
-        input[type="checkbox"] {
-            accent-color: #10B981; /* สีเขียว Emerald เมื่อติ๊กถูก */
+        .loader {
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #a855f7;
+            border-radius: 50%;
+            width: 14px;
+            height: 14px;
+            animation: spin 1s linear infinite;
         }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
-<body class="h-screen w-screen flex flex-col text-gray-800">
+<body class="min-h-screen flex flex-col text-gray-800">
 
-    <!-- Header (ขนาดกะทัดรัดเพื่อประหยัดพื้นที่จอ) -->
-    <header class="bg-purple-800 text-white px-4 py-2 shadow-md relative shrink-0 flex items-center justify-between z-10">
-        <div class="absolute inset-0 opacity-10 pointer-events-none" style="background-image: radial-gradient(circle, #ffffff 1px, transparent 1px); background-size: 20px 20px;"></div>
-        
-        <div class="relative z-10 flex items-center gap-3">
-            <i data-lucide="shield-check" class="w-6 h-6 md:w-8 md:h-8 text-white"></i>
+    <!-- Header -->
+    <header class="bg-gray-900 text-white px-6 py-3 shadow-md flex items-center justify-between sticky top-0 z-50">
+        <div class="flex items-center gap-3">
+            <i data-lucide="monitor" class="w-8 h-8 text-emerald-400"></i>
             <div>
-                <h1 class="text-sm md:text-lg font-bold tracking-wide leading-none">ระบบเช็คชื่อ ประธาน กปน. และ รปภ.</h1>
-                <p class="text-purple-200 text-[10px] md:text-xs">สำนักงานเขตพญาไท</p>
+                <h1 class="text-xl font-bold tracking-wide leading-none">แดชบอร์ดสถานะการรายงานตัว</h1>
+                <p class="text-gray-400 text-xs mt-1">อัปเดตข้อมูลอัตโนมัติทุก 10 วินาที</p>
             </div>
         </div>
 
-        <!-- Stats & Login Box -->
-        <div class="relative z-10 flex items-center gap-3 md:gap-4">
-            <div class="text-right">
-                <span class="text-[10px] md:text-xs text-purple-200 block leading-none mb-1">หน่วยที่มาครบแล้ว</span>
-                <div class="font-bold leading-none">
-                    <span id="arrived-count" class="text-green-300 text-lg md:text-2xl">0</span> 
-                    <span class="text-purple-300 text-sm">/</span> 
-                    <span id="total-count" class="text-white text-sm md:text-base">0</span> <span class="text-[10px] md:text-xs text-purple-200 font-normal">หน่วย</span>
-                </div>
+        <div class="flex items-center gap-6">
+            <div id="sync-status" class="flex items-center gap-2 text-sm text-yellow-400 font-medium hidden">
+                <div class="loader"></div> กำลังอัปเดต...
             </div>
             
-            <div class="w-px h-6 bg-purple-600 mx-1"></div>
-
-            <button id="btn-login" onclick="showModal('login')" class="flex items-center gap-1.5 px-2 py-1 md:px-3 md:py-1.5 bg-white text-purple-800 rounded-md text-[10px] md:text-xs font-bold hover:bg-gray-100 transition-colors">
-                <i data-lucide="lock" class="w-3 h-3 md:w-4 md:h-4"></i> Admin Login
-            </button>
-            <button id="btn-logout" onclick="logout()" class="hidden items-center gap-1.5 px-2 py-1 md:px-3 md:py-1.5 bg-red-500 text-white rounded-md text-[10px] md:text-xs font-bold hover:bg-red-600 transition-colors">
-                <i data-lucide="unlock" class="w-3 h-3 md:w-4 md:h-4"></i> ออกจากระบบ
-            </button>
+            <div class="text-right">
+                <span class="text-xs text-gray-400 block leading-none mb-1">ยอดรวมหน่วยที่มาครบ</span>
+                <div class="font-bold leading-none">
+                    <span id="arrived-count" class="text-emerald-400 text-3xl">0</span> 
+                    <span class="text-gray-500 text-lg">/</span> 
+                    <span id="total-count" class="text-white text-xl">80</span>
+                </div>
+            </div>
         </div>
     </header>
 
-    <!-- แจ้งเตือนสถานะ Admin -->
-    <div id="admin-banner" class="hidden bg-emerald-100 text-emerald-800 px-2 py-1 text-[10px] md:text-xs font-bold text-center border-b border-emerald-200 shrink-0 shadow-sm">
-        <i data-lucide="check-circle-2" class="w-3 h-3 inline-block align-text-bottom mr-1"></i> 
-        สถานะผู้ดูแลระบบ: เปิดสิทธิการเช็คชื่อแล้ว (ข้อมูลบันทึกอัตโนมัติ)
-    </div>
-
-    <!-- Main Content Split Screen -->
-    <main class="flex-1 w-full p-1 md:p-2 grid grid-cols-1 lg:grid-cols-2 gap-1 md:gap-2 min-h-0 bg-gray-100">
+    <!-- Main Content -->
+    <main class="flex-1 w-full p-4 grid grid-cols-1 lg:grid-cols-2 gap-6">
         
         <!-- Left: แขวงสามเสนใน -->
-        <div class="flex flex-col bg-white border border-purple-200 rounded-lg shadow-sm overflow-hidden min-h-0">
-            <div class="bg-purple-700 text-white px-3 py-1.5 flex justify-between items-center shrink-0">
-                <span class="font-bold text-xs md:text-sm">แขวงสามเสนใน (38 หน่วย)</span>
-                <span id="stat-samsen" class="text-xs font-medium bg-purple-800 px-2 py-0.5 rounded">0/0</span>
+        <div class="flex flex-col bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+            <div class="bg-purple-700 text-white px-4 py-3 flex justify-between items-center shadow-sm">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="map-pin" class="w-5 h-5"></i>
+                    <span class="font-bold text-lg">แขวงสามเสนใน</span>
+                </div>
+                <span id="stat-samsen" class="text-sm font-bold bg-purple-900 px-3 py-1 rounded-full border border-purple-500 shadow-inner">0 / 38</span>
             </div>
-            <!-- รายชื่อหน่วย (ใน PC จะบีบอัดไม่ให้เกิด Scrollbar, ในมือถือจะเลื่อนได้) -->
-            <div id="list-samsen" class="flex-1 flex flex-col overflow-y-auto lg:overflow-hidden p-1 gap-[1px]">
-                <!-- Render by JS -->
-            </div>
+            <div id="grid-samsen" class="p-4 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 xl:grid-cols-6 gap-3 bg-gray-50"></div>
         </div>
 
         <!-- Right: แขวงพญาไท -->
-        <div class="flex flex-col bg-white border border-purple-200 rounded-lg shadow-sm overflow-hidden min-h-0">
-            <div class="bg-purple-700 text-white px-3 py-1.5 flex justify-between items-center shrink-0">
-                <span class="font-bold text-xs md:text-sm">แขวงพญาไท (42 หน่วย)</span>
-                <span id="stat-phayathai" class="text-xs font-medium bg-purple-800 px-2 py-0.5 rounded">0/0</span>
+        <div class="flex flex-col bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+            <div class="bg-blue-700 text-white px-4 py-3 flex justify-between items-center shadow-sm">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="map-pin" class="w-5 h-5"></i>
+                    <span class="font-bold text-lg">แขวงพญาไท</span>
+                </div>
+                <span id="stat-phayathai" class="text-sm font-bold bg-blue-900 px-3 py-1 rounded-full border border-blue-500 shadow-inner">0 / 42</span>
             </div>
-            <!-- รายชื่อหน่วย (ใน PC จะบีบอัดไม่ให้เกิด Scrollbar, ในมือถือจะเลื่อนได้) -->
-            <div id="list-phayathai" class="flex-1 flex flex-col overflow-y-auto lg:overflow-hidden p-1 gap-[1px]">
-                <!-- Render by JS -->
-            </div>
+            <div id="grid-phayathai" class="p-4 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 xl:grid-cols-6 gap-3 bg-gray-50"></div>
         </div>
 
     </main>
 
-    <!-- Login Modal -->
-    <div id="modal-login" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm transition-opacity">
-        <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-xs text-center">
-            <div class="mb-3 flex justify-center"><div class="bg-purple-100 p-3 rounded-full"><i data-lucide="shield-check" class="text-purple-700 w-6 h-6"></i></div></div>
-            <h3 class="text-lg font-bold text-gray-800 mb-2">เข้าสู่ระบบแอดมิน</h3>
-            <p class="text-xs text-gray-500 mb-4">รหัสผ่านสำหรับเช็คชื่อ</p>
-            <form onsubmit="handleLogin(event)" class="space-y-3">
-                <input type="password" id="login-password" placeholder="PIN" class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 text-center text-xl tracking-widest outline-none" autocomplete="off" autofocus>
-                <p id="login-error" class="text-red-500 text-xs font-bold hidden">รหัสผ่านไม่ถูกต้อง!</p>
-                <div class="flex gap-2">
-                    <button type="button" onclick="hideModal('login')" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-2 rounded-lg text-sm">ยกเลิก</button>
-                    <button type="submit" class="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 rounded-lg text-sm shadow">ยืนยัน</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
     <!-- Script -->
     <script>
-        // ข้อมูลดิบแบบ CSV
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzAAdpNpp6XUFYztcrlvLTgZt5RacO5v2a2xs84ukSf518CktJckuZFZmlgoW6oakYL/exec";
+
         const csvData = `แขวง,หน่วยที่,ประธานกรรมการประจำหน่วยเลือกตั้ง,เจ้าหน้าที่รักษาความปลอดภัย,เจ้าหน้าที่รักษาความปลอดภัย,,,,
 สามเสนใน,1,นางสาวเพ็ญพรรณ การสมพรต,ร.ต.ท.โรจนศักดิ์ ภาคมฤค,,,,,
 สามเสนใน,2,นางสาวอภิชญา พิทักษ์สุริโย,ร.ต.ท.สุบิล กลั่นสุภา ,,,,,
@@ -202,24 +175,20 @@
 
         let appState = {
             officers: [],
-            attendance: {}, 
-            isAdmin: false,
-            totalUnits: 0,
-            samsenTotalUnits: 0,
-            phayathaiTotalUnits: 0
+            attendance: {}
         };
 
         function init() {
             parseData();
-            loadLocalStorage();
             lucide.createIcons();
-            renderAll();
+            fetchDataFromSheet();
+            
+            // ตั้งเวลาดึงข้อมูลใหม่ทุกๆ 10 วินาที
+            setInterval(fetchDataFromSheet, 10000);
         }
 
         function parseData() {
             const lines = csvData.trim().split('\n');
-            let sUnits = 0;
-            let pUnits = 0;
             
             for (let i = 1; i < lines.length; i++) {
                 const line = lines[i].trim();
@@ -230,211 +199,134 @@
                 const unit = cols[1] ? cols[1].trim() : '';
                 
                 if (district && unit) {
-                    const unitId = `${district}-${unit}`;
-                    const pName = cols[2] ? cols[2].trim() : '';
-                    const s1Name = cols[3] ? cols[3].trim() : '';
-                    const s2Name = cols[4] ? cols[4].trim() : '';
-
-                    let unitTotal = 0;
-                    if(pName) unitTotal++;
-                    if(s1Name) unitTotal++;
-                    if(s2Name) unitTotal++;
-
-                    if(district === 'สามเสนใน') sUnits++;
-                    if(district === 'พญาไท') pUnits++;
+                    let totalMembers = 0;
+                    if(cols[2]) totalMembers++; // ป
+                    if(cols[3]) totalMembers++; // ร1
+                    if(cols[4]) totalMembers++; // ร2
 
                     appState.officers.push({
-                        id: unitId,
-                        district,
+                        id: `${district}-${unit}`,
+                        district: district,
                         unit: parseInt(unit),
-                        president: pName,
-                        sec1: s1Name,
-                        sec2: s2Name,
-                        totalMembers: unitTotal
+                        hasP: !!cols[2],
+                        hasS1: !!cols[3],
+                        hasS2: !!cols[4],
+                        totalMembers: totalMembers
                     });
                 }
             }
-            appState.samsenTotalUnits = sUnits;
-            appState.phayathaiTotalUnits = pUnits;
-            appState.totalUnits = sUnits + pUnits;
         }
 
-        function loadLocalStorage() {
-            const saved = localStorage.getItem('election_attendance_data');
-            if (saved) {
-                appState.attendance = JSON.parse(saved);
+        async function fetchDataFromSheet() {
+            const syncEl = document.getElementById('sync-status');
+            syncEl.classList.remove('hidden');
+            
+            try {
+                const response = await fetch(SCRIPT_URL);
+                const data = await response.json();
+                
+                Object.keys(data).forEach(key => {
+                    appState.attendance[key] = (data[key] === true || data[key] === "true");
+                });
+                
+                renderDashboard();
+            } catch (error) {
+                console.error("Error fetching data:", error);
             }
-            updateStats();
+            
+            setTimeout(() => syncEl.classList.add('hidden'), 500); 
         }
 
-        function saveLocalStorage() {
-            localStorage.setItem('election_attendance_data', JSON.stringify(appState.attendance));
-            updateStats();
-        }
-
-        function createCheckboxHTML(item, roleCode, name, allChecked) {
-            if(!name) return '<div class="flex-1"></div>'; // Empty space to keep layout aligned
+        function renderDashboard() {
+            const gridSamsen = document.getElementById('grid-samsen');
+            const gridPhayathai = document.getElementById('grid-phayathai');
             
-            const personId = `${item.id}-${roleCode}`;
-            const isChecked = appState.attendance[personId] === true;
-            const disabledAttr = appState.isAdmin ? '' : 'disabled';
-            const cursorClass = appState.isAdmin ? 'cursor-pointer hover:opacity-80' : 'cursor-default';
-            
-            // สีของตัวอักษร: ถ้าครบทุกคนในแถว=ขาว, ถ้าติ๊ก=เขียว, ถ้ายังไม่ติ๊ก=เทา
-            let textClass = 'text-gray-600';
-            if (allChecked) textClass = 'text-white font-medium';
-            else if (isChecked) textClass = 'text-emerald-600 font-bold';
+            gridSamsen.innerHTML = '';
+            gridPhayathai.innerHTML = '';
 
-            return `
-                <label class="flex-1 flex items-center gap-1 overflow-hidden ${cursorClass}" title="${name}">
-                    <input type="checkbox" class="shrink-0 w-3 h-3 md:w-3.5 md:h-3.5 rounded border-gray-300 focus:ring-0 ${appState.isAdmin ? 'cursor-pointer' : ''}" 
-                        ${isChecked ? 'checked' : ''} 
-                        ${disabledAttr}
-                        onchange="toggleAttendance('${personId}', this.checked)">
-                    <span class="truncate text-[10px] md:text-xs xl:text-sm ${textClass} leading-tight">${name}</span>
-                </label>
-            `;
-        }
-
-        function renderAll() {
-            const containerSamsen = document.getElementById('list-samsen');
-            const containerPhayathai = document.getElementById('list-phayathai');
-            
-            containerSamsen.innerHTML = '';
-            containerPhayathai.innerHTML = '';
-
-            let samsenCompletedUnits = 0;
-            let phayathaiCompletedUnits = 0;
+            let totalSamsenComplete = 0;
+            let totalPhayathaiComplete = 0;
+            let totalComplete = 0;
 
             appState.officers.forEach(item => {
-                // เช็คยอดคนมาของหน่วยนี้
-                let checkedMembers = 0;
-                if(item.president && appState.attendance[`${item.id}-p`]) { checkedMembers++; }
-                if(item.sec1 && appState.attendance[`${item.id}-s1`]) { checkedMembers++; }
-                if(item.sec2 && appState.attendance[`${item.id}-s2`]) { checkedMembers++; }
+                let checkedCount = 0;
+                const pChecked = appState.attendance[`${item.id}-p`];
+                const s1Checked = appState.attendance[`${item.id}-s1`];
+                const s2Checked = appState.attendance[`${item.id}-s2`];
 
-                const isAllChecked = (item.totalMembers > 0 && checkedMembers === item.totalMembers);
+                if (item.hasP && pChecked) checkedCount++;
+                if (item.hasS1 && s1Checked) checkedCount++;
+                if (item.hasS2 && s2Checked) checkedCount++;
+
+                // เช็คสถานะ 3 ระดับ
+                const isEmpty = (checkedCount === 0);
+                const isComplete = (item.totalMembers > 0 && checkedCount === item.totalMembers);
+                const isPartial = (!isEmpty && !isComplete); // มาบ้างแต่ไม่ครบ (สีเหลือง)
                 
-                if (isAllChecked) {
-                    if (item.district === 'สามเสนใน') samsenCompletedUnits++;
-                    else phayathaiCompletedUnits++;
+                if (isComplete) {
+                    totalComplete++;
+                    if (item.district === 'สามเสนใน') totalSamsenComplete++;
+                    else totalPhayathaiComplete++;
                 }
 
-                // ตกแต่งสีพื้นหลังแถว ถ้าครบทุกคนให้เป็นสีเขียว Emerald
-                const rowBg = isAllChecked 
-                    ? 'bg-emerald-500 border border-emerald-600 shadow-sm z-10 scale-[1.01] rounded' 
-                    : 'bg-white border-b border-gray-200 hover:bg-purple-50';
+                // กำหนดสีกล่อง
+                let boxClass = 'bg-white border-gray-300 shadow-sm transition-all'; // Default (ยังไม่มีใครมา)
+                let textUnitClass = 'text-gray-700';
 
-                // ตกแต่งป้ายตัวเลขหน่วย
-                const unitBg = isAllChecked 
-                    ? 'bg-emerald-600/50 text-white border-r border-emerald-400' 
-                    : 'bg-purple-100 text-purple-800 border-r border-purple-200';
+                if (isComplete) {
+                    boxClass = 'bg-emerald-500 border-emerald-600 shadow-md transform scale-[1.02] transition-all';
+                    textUnitClass = 'text-white';
+                } else if (isPartial) {
+                    boxClass = 'bg-yellow-300 border-yellow-400 shadow-md transition-all';
+                    textUnitClass = 'text-yellow-900';
+                }
 
-                const rowHtml = `
-                    <div class="flex items-stretch transition-all duration-300 ${rowBg} flex-none min-h-[32px] lg:flex-1 lg:min-h-0 overflow-hidden">
-                        <div class="w-12 sm:w-14 flex items-center justify-center font-bold text-xs shrink-0 ${unitBg}">
-                            น. ${item.unit}
+                // ฟังก์ชันช่วยวาดวงกลมบอกสถานะ
+                const renderIndicator = (name, hasPerson, isPersonChecked) => {
+                    if (!hasPerson) return '';
+                    
+                    let dotClass = '';
+                    if (isComplete) {
+                        // ถ้ามาครบแล้วทั้งหน่วย จุดจะเป็นสีขาวตัวหนังสือเขียว กลืนกับกล่อง
+                        dotClass = 'bg-white text-emerald-600 border-white';
+                    } else {
+                        // สำหรับกล่องขาว และ กล่องเหลือง จุดจะบอกสถานะจริง (แดง=ยังไม่มา, เขียว=มาแล้ว)
+                        dotClass = isPersonChecked 
+                            ? 'bg-emerald-500 text-white border-emerald-600' 
+                            : 'bg-red-500 text-white border-red-600';
+                    }
+
+                    return `
+                        <div class="flex flex-col items-center justify-center">
+                            <div class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold border ${dotClass}" title="${name}">
+                                ${name}
+                            </div>
                         </div>
-                        <div class="flex-1 flex items-center px-1.5 md:px-2 gap-1 overflow-hidden">
-                            ${createCheckboxHTML(item, 'p', item.president, isAllChecked)}
-                            ${createCheckboxHTML(item, 's1', item.sec1, isAllChecked)}
-                            ${createCheckboxHTML(item, 's2', item.sec2, isAllChecked)}
+                    `;
+                };
+
+                const boxHtml = `
+                    <div class="flex flex-col items-center justify-center p-2 rounded-lg border ${boxClass} min-h-[80px]">
+                        <span class="text-xs font-bold mb-2 ${textUnitClass}">หน่วย ${item.unit}</span>
+                        <div class="flex gap-1.5">
+                            ${renderIndicator('ป.', item.hasP, pChecked)}
+                            ${renderIndicator('ร.1', item.hasS1, s1Checked)}
+                            ${renderIndicator('ร.2', item.hasS2, s2Checked)}
                         </div>
                     </div>
                 `;
 
                 if (item.district === 'สามเสนใน') {
-                    containerSamsen.insertAdjacentHTML('beforeend', rowHtml);
+                    gridSamsen.insertAdjacentHTML('beforeend', boxHtml);
                 } else {
-                    containerPhayathai.insertAdjacentHTML('beforeend', rowHtml);
+                    gridPhayathai.insertAdjacentHTML('beforeend', boxHtml);
                 }
             });
 
-            document.getElementById('stat-samsen').textContent = `${samsenCompletedUnits}/${appState.samsenTotalUnits} หน่วย`;
-            document.getElementById('stat-phayathai').textContent = `${phayathaiCompletedUnits}/${appState.phayathaiTotalUnits} หน่วย`;
-        }
-
-        function toggleAttendance(personId, isChecked) {
-            if (!appState.isAdmin) return;
-            
-            if (isChecked) {
-                appState.attendance[personId] = true;
-            } else {
-                delete appState.attendance[personId];
-            }
-            
-            saveLocalStorage();
-            renderAll(); // อัปเดตตารางใหม่เพื่อแสดงสีเขียวกรณีครบทุกคน
-        }
-
-        function updateStats() {
-            let completedUnits = 0;
-            appState.officers.forEach(item => {
-                let checkedMembers = 0;
-                if(item.president && appState.attendance[`${item.id}-p`]) { checkedMembers++; }
-                if(item.sec1 && appState.attendance[`${item.id}-s1`]) { checkedMembers++; }
-                if(item.sec2 && appState.attendance[`${item.id}-s2`]) { checkedMembers++; }
-                if(item.totalMembers > 0 && checkedMembers === item.totalMembers) {
-                    completedUnits++;
-                }
-            });
-            document.getElementById('arrived-count').textContent = completedUnits;
-            document.getElementById('total-count').textContent = appState.totalUnits;
-        }
-
-        /* --- ระบบ Login Modal --- */
-        function showModal(id) {
-            document.getElementById(`modal-${id}`).classList.remove('hidden');
-            if (id === 'login') {
-                document.getElementById('login-password').value = '';
-                document.getElementById('login-error').classList.add('hidden');
-                setTimeout(() => document.getElementById('login-password').focus(), 100);
-            }
-        }
-
-        function hideModal(id) {
-            document.getElementById(`modal-${id}`).classList.add('hidden');
-        }
-
-        function handleLogin(e) {
-            e.preventDefault();
-            const pwd = document.getElementById('login-password').value.trim();
-            const err = document.getElementById('login-error');
-            
-            if (pwd === '0000') {
-                appState.isAdmin = true;
-                hideModal('login');
-                updateUIState();
-                renderAll(); // รีเฟรชเพื่อปลดล็อก Checkbox ให้กดได้
-            } else {
-                err.classList.remove('hidden');
-            }
-        }
-
-        function logout() {
-            appState.isAdmin = false;
-            updateUIState();
-            renderAll(); 
-        }
-
-        function updateUIState() {
-            const btnLogin = document.getElementById('btn-login');
-            const btnLogout = document.getElementById('btn-logout');
-            const adminBanner = document.getElementById('admin-banner');
-
-            if (appState.isAdmin) {
-                btnLogin.classList.add('hidden');
-                btnLogin.classList.remove('flex');
-                btnLogout.classList.remove('hidden');
-                btnLogout.classList.add('flex');
-                adminBanner.classList.remove('hidden');
-            } else {
-                btnLogin.classList.remove('hidden');
-                btnLogin.classList.add('flex');
-                btnLogout.classList.add('hidden');
-                btnLogout.classList.remove('flex');
-                adminBanner.classList.add('hidden');
-            }
+            // อัปเดตตัวเลข
+            document.getElementById('stat-samsen').textContent = `${totalSamsenComplete} / 38`;
+            document.getElementById('stat-phayathai').textContent = `${totalPhayathaiComplete} / 42`;
+            document.getElementById('arrived-count').textContent = totalComplete;
         }
 
         window.onload = init;
