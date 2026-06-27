@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard สถานะการรายงานตัว กปน.</title>
+    <title>สถานะการรายงานตัวของ ประธาน กปน. และ รปภ.เขตพญาไท</title>
     
     <!-- โหลด Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -17,72 +17,92 @@
     <style>
         body {
             font-family: 'Sarabun', sans-serif;
-            background-color: #F3F4F6;
+            background-color: #F5F3FF; /* โทนม่วงอ่อน สบายตา */
+            overflow: hidden; /* ล็อคหน้าจอไม่ให้มี Scrollbar */
         }
-        .loader {
-            border: 2px solid #f3f3f3;
-            border-top: 2px solid #a855f7;
+        /* บังคับ Grid ให้แบ่ง 6 คอลัมน์ 7 แถว เพื่อให้พอดีกับ 42 หน่วยใน 1 หน้าจอ */
+        .board-grid {
+            display: grid;
+            grid-template-columns: repeat(6, minmax(0, 1fr));
+            grid-template-rows: repeat(7, minmax(0, 1fr));
+            gap: 0.35rem; /* ระยะห่างช่อง */
+            height: 100%;
+        }
+        /* จุดกระพริบแสดงการออนไลน์ */
+        .live-dot {
+            height: 8px;
+            width: 8px;
+            background-color: #10B981;
             border-radius: 50%;
-            width: 14px;
-            height: 14px;
-            animation: spin 1s linear infinite;
+            display: inline-block;
+            box-shadow: 0 0 8px #10B981;
+            animation: pulse-green 1.5s infinite;
         }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes pulse-green {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
     </style>
 </head>
-<body class="min-h-screen flex flex-col text-gray-800">
+<body class="h-screen w-screen flex flex-col text-gray-800">
 
-    <!-- Header -->
-    <header class="bg-gray-900 text-white px-6 py-3 shadow-md flex items-center justify-between sticky top-0 z-50">
-        <div class="flex items-center gap-3">
-            <i data-lucide="monitor" class="w-8 h-8 text-emerald-400"></i>
+    <!-- Header (โทนสีม่วงเข้ม) -->
+    <header class="bg-purple-800 text-white px-4 py-2.5 shadow-md flex items-center justify-between shrink-0 z-10 border-b-4 border-purple-600">
+        <div class="flex items-center gap-3 md:gap-4">
+            <!-- โลโก้ (ถ้าไม่มีไฟล์ Logo.png ในเครื่อง จะดึงรูปตรา กทม. จากเน็ตมาแสดงแทนอัตโนมัติ) -->
+            <div class="bg-white rounded p-1 shadow-sm h-10 w-10 md:h-12 md:w-12 flex items-center justify-center shrink-0">
+                <img src="Logo.png" alt="Logo" class="max-h-full max-w-full object-contain" onerror="this.onerror=null; this.src='https://upload.wikimedia.org/wikipedia/commons/thumb/1/14/Bangkok_Metropolitan_Administration_Emblem.svg/120px-Bangkok_Metropolitan_Administration_Emblem.svg.png';">
+            </div>
+            
             <div>
-                <h1 class="text-xl font-bold tracking-wide leading-none">แดชบอร์ดสถานะการรายงานตัว</h1>
-                <p class="text-gray-400 text-xs mt-1">อัปเดตข้อมูลอัตโนมัติทุก 10 วินาที</p>
+                <h1 class="text-base md:text-xl lg:text-2xl font-bold tracking-wide leading-tight text-white drop-shadow-md">
+                    สถานะการรายงานตัวของ ประธาน กปน. และ รปภ.เขตพญาไท
+                </h1>
+                <div class="flex items-center gap-1.5 mt-0.5">
+                    <span class="live-dot"></span>
+                    <span class="text-purple-200 text-xs font-medium tracking-wide">กำลังเชื่อมต่อข้อมูลแบบเรียลไทม์...</span>
+                </div>
             </div>
         </div>
 
-        <div class="flex items-center gap-6">
-            <div id="sync-status" class="flex items-center gap-2 text-sm text-yellow-400 font-medium hidden">
-                <div class="loader"></div> กำลังอัปเดต...
-            </div>
-            
-            <div class="text-right">
-                <span class="text-xs text-gray-400 block leading-none mb-1">ยอดรวมหน่วยที่มาครบ</span>
-                <div class="font-bold leading-none">
-                    <span id="arrived-count" class="text-emerald-400 text-3xl">0</span> 
-                    <span class="text-gray-500 text-lg">/</span> 
-                    <span id="total-count" class="text-white text-xl">80</span>
-                </div>
+        <div class="text-right shrink-0 bg-purple-900/50 px-4 py-1.5 rounded-lg border border-purple-700">
+            <span class="text-[10px] md:text-xs text-purple-200 block leading-none mb-1">ยอดรวมหน่วยที่มาครบ</span>
+            <div class="font-bold leading-none">
+                <span id="arrived-count" class="text-emerald-400 text-2xl md:text-3xl drop-shadow">0</span> 
+                <span class="text-purple-300 text-lg md:text-xl mx-0.5">/</span> 
+                <span id="total-count" class="text-white text-lg md:text-xl">80</span>
             </div>
         </div>
     </header>
 
     <!-- Main Content -->
-    <main class="flex-1 w-full p-4 grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <main class="flex-1 w-full p-2 md:p-3 grid grid-cols-1 lg:grid-cols-2 gap-2 md:gap-4 min-h-0 bg-purple-50/30">
         
         <!-- Left: แขวงสามเสนใน -->
-        <div class="flex flex-col bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
-            <div class="bg-purple-700 text-white px-4 py-3 flex justify-between items-center shadow-sm">
+        <div class="flex flex-col bg-white rounded-xl shadow-lg border border-purple-100 overflow-hidden min-h-0">
+            <div class="bg-purple-600 text-white px-4 py-2 flex justify-between items-center shadow-sm shrink-0">
                 <div class="flex items-center gap-2">
-                    <i data-lucide="map-pin" class="w-5 h-5"></i>
-                    <span class="font-bold text-lg">แขวงสามเสนใน</span>
+                    <i data-lucide="map-pin" class="w-4 h-4 md:w-5 md:h-5 text-purple-200"></i>
+                    <span class="font-bold text-sm md:text-base lg:text-lg tracking-wide">แขวงสามเสนใน</span>
                 </div>
-                <span id="stat-samsen" class="text-sm font-bold bg-purple-900 px-3 py-1 rounded-full border border-purple-500 shadow-inner">0 / 38</span>
+                <span id="stat-samsen" class="text-xs md:text-sm font-bold bg-purple-800 px-3 py-1 rounded-full border border-purple-400 shadow-inner">0 / 38</span>
             </div>
-            <div id="grid-samsen" class="p-4 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 xl:grid-cols-6 gap-3 bg-gray-50"></div>
+            <!-- พื้นที่ Grid พอดีจอ -->
+            <div id="grid-samsen" class="flex-1 p-2 bg-slate-50 board-grid min-h-0"></div>
         </div>
 
         <!-- Right: แขวงพญาไท -->
-        <div class="flex flex-col bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
-            <div class="bg-blue-700 text-white px-4 py-3 flex justify-between items-center shadow-sm">
+        <div class="flex flex-col bg-white rounded-xl shadow-lg border border-purple-100 overflow-hidden min-h-0">
+            <div class="bg-purple-600 text-white px-4 py-2 flex justify-between items-center shadow-sm shrink-0">
                 <div class="flex items-center gap-2">
-                    <i data-lucide="map-pin" class="w-5 h-5"></i>
-                    <span class="font-bold text-lg">แขวงพญาไท</span>
+                    <i data-lucide="map-pin" class="w-4 h-4 md:w-5 md:h-5 text-purple-200"></i>
+                    <span class="font-bold text-sm md:text-base lg:text-lg tracking-wide">แขวงพญาไท</span>
                 </div>
-                <span id="stat-phayathai" class="text-sm font-bold bg-blue-900 px-3 py-1 rounded-full border border-blue-500 shadow-inner">0 / 42</span>
+                <span id="stat-phayathai" class="text-xs md:text-sm font-bold bg-purple-800 px-3 py-1 rounded-full border border-purple-400 shadow-inner">0 / 42</span>
             </div>
-            <div id="grid-phayathai" class="p-4 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 xl:grid-cols-6 gap-3 bg-gray-50"></div>
+            <!-- พื้นที่ Grid พอดีจอ -->
+            <div id="grid-phayathai" class="flex-1 p-2 bg-slate-50 board-grid min-h-0"></div>
         </div>
 
     </main>
@@ -91,6 +111,7 @@
     <script>
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzAAdpNpp6XUFYztcrlvLTgZt5RacO5v2a2xs84ukSf518CktJckuZFZmlgoW6oakYL/exec";
 
+        // ข้อมูลหน่วย
         const csvData = `แขวง,หน่วยที่,ประธานกรรมการประจำหน่วยเลือกตั้ง,เจ้าหน้าที่รักษาความปลอดภัย,เจ้าหน้าที่รักษาความปลอดภัย,,,,
 สามเสนใน,1,นางสาวเพ็ญพรรณ การสมพรต,ร.ต.ท.โรจนศักดิ์ ภาคมฤค,,,,,
 สามเสนใน,2,นางสาวอภิชญา พิทักษ์สุริโย,ร.ต.ท.สุบิล กลั่นสุภา ,,,,,
@@ -173,23 +194,19 @@
 พญาไท,41,นายพชร หนูศรีใส,ด.ต.ศักดิ์ดา ฝ่ายจตุรัด ,,,,,
 พญาไท,42,นางสาวมาไล กรรณีวงษ์,ส.ต.ต.สหภาพ วงคำสิทธิ์ ,,,,,`;
 
-        let appState = {
-            officers: [],
-            attendance: {}
-        };
+        let appState = { officers: [], attendance: {} };
 
         function init() {
             parseData();
             lucide.createIcons();
             fetchDataFromSheet();
             
-            // ตั้งเวลาดึงข้อมูลใหม่ทุกๆ 10 วินาที
-            setInterval(fetchDataFromSheet, 10000);
+            // รีเฟรชข้อมูลแบบต่อเนื่องทุก 3.5 วินาที
+            setInterval(fetchDataFromSheet, 3500);
         }
 
         function parseData() {
             const lines = csvData.trim().split('\n');
-            
             for (let i = 1; i < lines.length; i++) {
                 const line = lines[i].trim();
                 if (!line) continue;
@@ -200,9 +217,9 @@
                 
                 if (district && unit) {
                     let totalMembers = 0;
-                    if(cols[2]) totalMembers++; // ป
-                    if(cols[3]) totalMembers++; // ร1
-                    if(cols[4]) totalMembers++; // ร2
+                    if(cols[2]) totalMembers++; // ประธาน
+                    if(cols[3]) totalMembers++; // รปภ.1
+                    if(cols[4]) totalMembers++; // รปภ.2
 
                     appState.officers.push({
                         id: `${district}-${unit}`,
@@ -218,31 +235,33 @@
         }
 
         async function fetchDataFromSheet() {
-            const syncEl = document.getElementById('sync-status');
-            syncEl.classList.remove('hidden');
-            
             try {
                 const response = await fetch(SCRIPT_URL);
                 const data = await response.json();
                 
+                let isChanged = false;
                 Object.keys(data).forEach(key => {
-                    appState.attendance[key] = (data[key] === true || data[key] === "true");
+                    const status = (data[key] === true || data[key] === "true");
+                    if(appState.attendance[key] !== status) {
+                        appState.attendance[key] = status;
+                        isChanged = true;
+                    }
                 });
                 
-                renderDashboard();
+                if(isChanged || document.getElementById('grid-samsen').innerHTML === '') {
+                    renderDashboard();
+                }
             } catch (error) {
-                console.error("Error fetching data:", error);
+                console.error("Connection Error:", error);
             }
-            
-            setTimeout(() => syncEl.classList.add('hidden'), 500); 
         }
 
         function renderDashboard() {
             const gridSamsen = document.getElementById('grid-samsen');
             const gridPhayathai = document.getElementById('grid-phayathai');
             
-            gridSamsen.innerHTML = '';
-            gridPhayathai.innerHTML = '';
+            let htmlSamsen = '';
+            let htmlPhayathai = '';
 
             let totalSamsenComplete = 0;
             let totalPhayathaiComplete = 0;
@@ -258,10 +277,9 @@
                 if (item.hasS1 && s1Checked) checkedCount++;
                 if (item.hasS2 && s2Checked) checkedCount++;
 
-                // เช็คสถานะ 3 ระดับ
                 const isEmpty = (checkedCount === 0);
                 const isComplete = (item.totalMembers > 0 && checkedCount === item.totalMembers);
-                const isPartial = (!isEmpty && !isComplete); // มาบ้างแต่ไม่ครบ (สีเหลือง)
+                const isPartial = (!isEmpty && !isComplete);
                 
                 if (isComplete) {
                     totalComplete++;
@@ -269,61 +287,60 @@
                     else totalPhayathaiComplete++;
                 }
 
-                // กำหนดสีกล่อง
-                let boxClass = 'bg-white border-gray-300 shadow-sm transition-all'; // Default (ยังไม่มีใครมา)
-                let textUnitClass = 'text-gray-700';
+                // สไตล์ของกล่อง 3 ระดับ
+                let boxClass = 'bg-white border-gray-200 shadow-sm'; // ขาว (ยังไม่มา)
+                let textUnitClass = 'text-gray-500';
 
                 if (isComplete) {
-                    boxClass = 'bg-emerald-500 border-emerald-600 shadow-md transform scale-[1.02] transition-all';
-                    textUnitClass = 'text-white';
+                    boxClass = 'bg-emerald-500 border-emerald-600 shadow-md transform scale-[1.03] transition-transform'; // เขียว (ครบ)
+                    textUnitClass = 'text-white drop-shadow-sm';
                 } else if (isPartial) {
-                    boxClass = 'bg-yellow-300 border-yellow-400 shadow-md transition-all';
-                    textUnitClass = 'text-yellow-900';
+                    boxClass = 'bg-amber-100 border-amber-300 shadow-md'; // เหลือง (มาบ้าง)
+                    textUnitClass = 'text-amber-800';
                 }
 
-                // ฟังก์ชันช่วยวาดวงกลมบอกสถานะ
                 const renderIndicator = (name, hasPerson, isPersonChecked) => {
                     if (!hasPerson) return '';
                     
                     let dotClass = '';
                     if (isComplete) {
-                        // ถ้ามาครบแล้วทั้งหน่วย จุดจะเป็นสีขาวตัวหนังสือเขียว กลืนกับกล่อง
-                        dotClass = 'bg-white text-emerald-600 border-white';
+                        dotClass = 'bg-white text-emerald-600 font-extrabold shadow-sm';
                     } else {
-                        // สำหรับกล่องขาว และ กล่องเหลือง จุดจะบอกสถานะจริง (แดง=ยังไม่มา, เขียว=มาแล้ว)
+                        // เปลี่ยนสีจุดให้เป็นสีม่วงอ่อนๆ จะได้ไม่ฉูดฉาดเวลาคนยังไม่มา
                         dotClass = isPersonChecked 
-                            ? 'bg-emerald-500 text-white border-emerald-600' 
-                            : 'bg-red-500 text-white border-red-600';
+                            ? 'bg-emerald-500 text-white font-bold shadow-sm' 
+                            : 'bg-purple-100 text-purple-500 border border-purple-200';
                     }
 
+                    // ปรับรูปแบบจากวงกลม เป็นแบบแคปซูล (Pill) เพื่อรองรับตัวหนังสือยาวขึ้น เช่น "รปภ.1"
                     return `
-                        <div class="flex flex-col items-center justify-center">
-                            <div class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold border ${dotClass}" title="${name}">
-                                ${name}
-                            </div>
+                        <div class="px-1.5 h-4 md:h-[18px] rounded-full flex items-center justify-center text-[8px] md:text-[9px] whitespace-nowrap ${dotClass}">
+                            ${name}
                         </div>
                     `;
                 };
 
                 const boxHtml = `
-                    <div class="flex flex-col items-center justify-center p-2 rounded-lg border ${boxClass} min-h-[80px]">
-                        <span class="text-xs font-bold mb-2 ${textUnitClass}">หน่วย ${item.unit}</span>
-                        <div class="flex gap-1.5">
-                            ${renderIndicator('ป.', item.hasP, pChecked)}
-                            ${renderIndicator('ร.1', item.hasS1, s1Checked)}
-                            ${renderIndicator('ร.2', item.hasS2, s2Checked)}
+                    <div class="flex flex-col items-center justify-center p-1 md:p-1.5 rounded-lg border h-full overflow-hidden ${boxClass}">
+                        <span class="text-[9px] md:text-xs font-bold mb-0.5 md:mb-1 tracking-tight ${textUnitClass}">หน่วย ${item.unit}</span>
+                        <div class="flex gap-1 flex-wrap justify-center w-full">
+                            ${renderIndicator('ปธ.', item.hasP, pChecked)}
+                            ${renderIndicator('รปภ.1', item.hasS1, s1Checked)}
+                            ${renderIndicator('รปภ.2', item.hasS2, s2Checked)}
                         </div>
                     </div>
                 `;
 
                 if (item.district === 'สามเสนใน') {
-                    gridSamsen.insertAdjacentHTML('beforeend', boxHtml);
+                    htmlSamsen += boxHtml;
                 } else {
-                    gridPhayathai.insertAdjacentHTML('beforeend', boxHtml);
+                    htmlPhayathai += boxHtml;
                 }
             });
 
-            // อัปเดตตัวเลข
+            gridSamsen.innerHTML = htmlSamsen;
+            gridPhayathai.innerHTML = htmlPhayathai;
+
             document.getElementById('stat-samsen').textContent = `${totalSamsenComplete} / 38`;
             document.getElementById('stat-phayathai').textContent = `${totalPhayathaiComplete} / 42`;
             document.getElementById('arrived-count').textContent = totalComplete;
