@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบเช็คชื่อ ประธาน กปน. และ รปภ.</title>
+    
+    <!-- โหลด Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- โหลด Font ภาษาไทย (Sarabun) -->
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- โหลด Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <style>
+        body {
+            font-family: 'Sarabun', sans-serif;
+            background-color: #F5F3FF; /* สีพื้นหลังม่วงอ่อน */
+            overflow: hidden; /* ล็อคไม่ให้หน้าจอหลักเลื่อน */
+        }
+        
+        /* Checkbox Style */
+        input[type="checkbox"] {
+            accent-color: #10B981; /* สีเขียว Emerald เมื่อติ๊กถูก */
+        }
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col text-gray-800">
+
+    <!-- Header (ขนาดกะทัดรัดเพื่อประหยัดพื้นที่จอ) -->
+    <header class="bg-purple-800 text-white px-4 py-2 shadow-md relative shrink-0 flex items-center justify-between z-10">
+        <div class="absolute inset-0 opacity-10 pointer-events-none" style="background-image: radial-gradient(circle, #ffffff 1px, transparent 1px); background-size: 20px 20px;"></div>
+        
+        <div class="relative z-10 flex items-center gap-3">
+            <i data-lucide="shield-check" class="w-6 h-6 md:w-8 md:h-8 text-white"></i>
+            <div>
+                <h1 class="text-sm md:text-lg font-bold tracking-wide leading-none">ระบบเช็คชื่อ ประธาน กปน. และ รปภ.</h1>
+                <p class="text-purple-200 text-[10px] md:text-xs">สำนักงานเขตพญาไท</p>
+            </div>
+        </div>
+
+        <!-- Stats & Login Box -->
+        <div class="relative z-10 flex items-center gap-3 md:gap-4">
+            <div class="text-right">
+                <span class="text-[10px] md:text-xs text-purple-200 block leading-none mb-1">หน่วยที่มาครบแล้ว</span>
+                <div class="font-bold leading-none">
+                    <span id="arrived-count" class="text-green-300 text-lg md:text-2xl">0</span> 
+                    <span class="text-purple-300 text-sm">/</span> 
+                    <span id="total-count" class="text-white text-sm md:text-base">0</span> <span class="text-[10px] md:text-xs text-purple-200 font-normal">หน่วย</span>
+                </div>
+            </div>
+            
+            <div class="w-px h-6 bg-purple-600 mx-1"></div>
+
+            <button id="btn-login" onclick="showModal('login')" class="flex items-center gap-1.5 px-2 py-1 md:px-3 md:py-1.5 bg-white text-purple-800 rounded-md text-[10px] md:text-xs font-bold hover:bg-gray-100 transition-colors">
+                <i data-lucide="lock" class="w-3 h-3 md:w-4 md:h-4"></i> Admin Login
+            </button>
+            <button id="btn-logout" onclick="logout()" class="hidden items-center gap-1.5 px-2 py-1 md:px-3 md:py-1.5 bg-red-500 text-white rounded-md text-[10px] md:text-xs font-bold hover:bg-red-600 transition-colors">
+                <i data-lucide="unlock" class="w-3 h-3 md:w-4 md:h-4"></i> ออกจากระบบ
+            </button>
+        </div>
+    </header>
+
+    <!-- แจ้งเตือนสถานะ Admin -->
+    <div id="admin-banner" class="hidden bg-emerald-100 text-emerald-800 px-2 py-1 text-[10px] md:text-xs font-bold text-center border-b border-emerald-200 shrink-0 shadow-sm">
+        <i data-lucide="check-circle-2" class="w-3 h-3 inline-block align-text-bottom mr-1"></i> 
+        สถานะผู้ดูแลระบบ: เปิดสิทธิการเช็คชื่อแล้ว (ข้อมูลบันทึกอัตโนมัติ)
+    </div>
+
+    <!-- Main Content Split Screen -->
+    <main class="flex-1 w-full p-1 md:p-2 grid grid-cols-1 lg:grid-cols-2 gap-1 md:gap-2 min-h-0 bg-gray-100">
+        
+        <!-- Left: แขวงสามเสนใน -->
+        <div class="flex flex-col bg-white border border-purple-200 rounded-lg shadow-sm overflow-hidden min-h-0">
+            <div class="bg-purple-700 text-white px-3 py-1.5 flex justify-between items-center shrink-0">
+                <span class="font-bold text-xs md:text-sm">แขวงสามเสนใน (38 หน่วย)</span>
+                <span id="stat-samsen" class="text-xs font-medium bg-purple-800 px-2 py-0.5 rounded">0/0</span>
+            </div>
+            <!-- รายชื่อหน่วย (ใน PC จะบีบอัดไม่ให้เกิด Scrollbar, ในมือถือจะเลื่อนได้) -->
+            <div id="list-samsen" class="flex-1 flex flex-col overflow-y-auto lg:overflow-hidden p-1 gap-[1px]">
+                <!-- Render by JS -->
+            </div>
+        </div>
+
+        <!-- Right: แขวงพญาไท -->
+        <div class="flex flex-col bg-white border border-purple-200 rounded-lg shadow-sm overflow-hidden min-h-0">
+            <div class="bg-purple-700 text-white px-3 py-1.5 flex justify-between items-center shrink-0">
+                <span class="font-bold text-xs md:text-sm">แขวงพญาไท (42 หน่วย)</span>
+                <span id="stat-phayathai" class="text-xs font-medium bg-purple-800 px-2 py-0.5 rounded">0/0</span>
+            </div>
+            <!-- รายชื่อหน่วย (ใน PC จะบีบอัดไม่ให้เกิด Scrollbar, ในมือถือจะเลื่อนได้) -->
+            <div id="list-phayathai" class="flex-1 flex flex-col overflow-y-auto lg:overflow-hidden p-1 gap-[1px]">
+                <!-- Render by JS -->
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Login Modal -->
+    <div id="modal-login" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm transition-opacity">
+        <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-xs text-center">
+            <div class="mb-3 flex justify-center"><div class="bg-purple-100 p-3 rounded-full"><i data-lucide="shield-check" class="text-purple-700 w-6 h-6"></i></div></div>
+            <h3 class="text-lg font-bold text-gray-800 mb-2">เข้าสู่ระบบแอดมิน</h3>
+            <p class="text-xs text-gray-500 mb-4">รหัสผ่านสำหรับเช็คชื่อ</p>
+            <form onsubmit="handleLogin(event)" class="space-y-3">
+                <input type="password" id="login-password" placeholder="PIN" class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 text-center text-xl tracking-widest outline-none" autocomplete="off" autofocus>
+                <p id="login-error" class="text-red-500 text-xs font-bold hidden">รหัสผ่านไม่ถูกต้อง!</p>
+                <div class="flex gap-2">
+                    <button type="button" onclick="hideModal('login')" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-2 rounded-lg text-sm">ยกเลิก</button>
+                    <button type="submit" class="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 rounded-lg text-sm shadow">ยืนยัน</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Script -->
+    <script>
+        // ข้อมูลดิบแบบ CSV
+        const csvData = `แขวง,หน่วยที่,ประธานกรรมการประจำหน่วยเลือกตั้ง,เจ้าหน้าที่รักษาความปลอดภัย,เจ้าหน้าที่รักษาความปลอดภัย,,,,
+สามเสนใน,1,นางสาวเพ็ญพรรณ การสมพรต,ร.ต.ท.โรจนศักดิ์ ภาคมฤค,,,,,
+สามเสนใน,2,นางสาวอภิชญา พิทักษ์สุริโย,ร.ต.ท.สุบิล กลั่นสุภา ,,,,,
+สามเสนใน,3,นางสาวกันยารัตน์ ชินวงศ,ร.ต.ท.พงษ์เรืองรอง คำมงคล ,,,,,
+สามเสนใน,4,นางสาวโสดารัตน์ วาพัดไทย,ด.ต.ชรินทร์ ค้ำชู ,,,,,
+สามเสนใน,5,นายวิศรุติ น้อยอามาตย์,ร.ต.ต.กฤตภาส คำพามา ,,,,,
+สามเสนใน,6,นางสาวณิชาภัทร หอละเอียด,ด.ต.สุชาติ ชนะรัตน์,,,,,
+สามเสนใน,7,นางสาวมณีรัตน์ ขุนเที่ยงธรรม,ร.ต.ท.ปัญญาพล เอื้อวีรวัฒนวงศ์ ,,,,,
+สามเสนใน,8,นางสาวสุภาวิดา  ทองพูล,ด.ต.พิสิษฐ์ โตล่ำ ,,,,,
+สามเสนใน,9,นางสาวเกศราภรณ์ สังข์โกมล,ด.ต.กำพล จิตท้วม ,,,,,
+สามเสนใน,10,นายนฤนนท์ คงคอน,จ.ส.ต.ทศพล ภูบาล,,,,,
+สามเสนใน,11,นางสาวมณฑิกา จารุธรรม,จ.ส.ต.ศราวิน บุญแย้ม ,,,,,
+สามเสนใน,12,นางสาวชรินทร์ทิพย์  พัฒน์ศักดิ์,ส.ต.อ.กฤษณพงษ์ บุตรศรีจันทร์ ,,,,,
+สามเสนใน,13,นางสาวอิงค์ธวณิชย์ เจริญภูมิ,ส.ต.ท.ฐาปกรณ์ จันทร์สระบัว ,,,,,
+สามเสนใน,14,นางสาวมลธิรา หงษาวดี,ส.ต.ท.เจริญทรัพย์ ศรีสมบูรณ์,,,,,
+สามเสนใน,15,นางสาวอัญชลี คำมาวงศ์,ด.ต.ณัฐวุฒิ เกษวิริยะการ ,,,,,
+สามเสนใน,16,นายสุเมธี วิทุนัด,ส.ต.อ.พนะสิทธิ์ ศรีพันธ์ ,ส.ต.อ.วชิระ กฤตชิระชัย,,,,
+สามเสนใน,17,นางสาวนิภารัตน์ เหมะเทวัน,ส.ต.อ.ทิชานนท์ พินิจมนตรี ,,,,,
+สามเสนใน,18,นางสาวขวัยชนก หนูบรรจง,ส.ต.ท.ภานุพงษ์ บุญรินทร์ ,,,,,
+สามเสนใน,19,นายนัสวัฒน์ แตงผึ้ง,ร.ต.อ.ปาฎิหาริย์ วัฒนประคัลภ์ ,ว่าที่ร้อยตรี ฐิติกร บุญธรรม,,,,
+สามเสนใน,20,นางสาวธีรกานต์ โมมขุนทด,ร.ต.อ.วีระยุทธ พลนงค์ ,,,,,
+สามเสนใน,21,นางสาวอรญา นุชเปล่ง,ร.ต.อ.เวทิศ สิงหะ,,,,,
+สามเสนใน,22,นางสาวอภิสรา ดาวกระจาย,ร.ต.อ.ภัคพงษ์ ชูพัฒน์พงศ์ ,,,,,
+สามเสนใน,23,นางสาวชนิสรา ขันทองดี,ร.ต.อ.ทิวัตถ์ ติวเถาว์ ,,,,,
+สามเสนใน,24,นางสาววาสนา ปังคะบุตร,ร.ต.ต.กิตติพศ ทองคำสุข ,,,,,
+สามเสนใน,25,นางสาวลัดดาวัลย์ คำหอมกุล,ร.ต.ท.นัฐพล เวชศาสตร์ ,,,,,
+สามเสนใน,26,นางธัญญ์ณัชภัค ธนากุลกิติพัฒน์,ร.ต.ท.สมศักดิ์ พุ่มอุสิต ,,,,,
+สามเสนใน,27,นางสาวปวีณา งามผ่อง,ร.ต.ท.อำนาจ โสมณวัฒน์ ,,,,,
+สามเสนใน,28,นางสาวนันทิกา กิจกล้า,ส.ต.อ.ภาสกร หลู่โยธา ,,,,,
+สามเสนใน,29,นางสาวธัญชนก มาละวัน,ร.ต.อ.ยศภัทร ขันแก้วน่าน ,,,,,
+สามเสนใน,30,นางสุกัญญา ปานแก้ว,ส.ต.อ.ธนพล อาจประจักษ์ ,,,,,
+สามเสนใน,31,นางเกณิกา จันทร์ไทย ,ร.ต.ท.ธนวัฒน์ กองทอง ,,,,,
+สามเสนใน,32,นางสาวดวงใจ ไชยคิรินทร์,ร.ต.ต.พรชัย แก้วนาง ,,,,,
+สามเสนใน,33,นางสาวปิยมาภรณ์ เรืองประดิษฐ์,ส.ต.ท.ไชยวุฒิ ศุภประสิทธิ์ ,,,,,
+สามเสนใน,34,นางสาวภัณฑิรา ปัญญาไว,ส.ต.ท.ธานินทร์ เข็มแซมเกษ ,,,,,
+สามเสนใน,35,นางสาวหนึ่งฤทัย มาหา,ร.ต.อ.ไกรสร เกิดสุวรรณ์ ,,,,,
+สามเสนใน,36,นางสาวสิริลักษณ์ เข็มทอง,ร.ต.อ.พิสุทธิ์ ฤทธิ์ขจร ,,,,,
+สามเสนใน,37,นางสาวพัชรินทร์ ตังคะอารี,ส.ต.ท.อดิศักดิ์ องอาจ ,ส.ต.ท.จักรภัทร ม่วงมณี ,,,,
+สามเสนใน,38,นางสาวนิตรยา ลาดจำปา,ส.ต.ต.ธนวัฒน์ สุภาษา ,ส.ต.ต.เกียรติพงษ์ โชติกาล ,,,,
+พญาไท,1,นางสาวดวงเดือน ทัศจันทร์,ส.ต.ท.ภูวไนย สุคลทะ ,,,,,
+พญาไท,2,นายวัฒนเทพ ยุนขุนทศ,ส.ต.ต.จตุภูมิ ประสาทเขตกรณ์ ,,,,,
+พญาไท,3,นายศักดิ์ชัย มหาอุตร,ส.ต.อ.ฉัตรชัย สีแตง ,ส.ต.ท.นนทัต ประพันธ์,,,,
+พญาไท,4,นางสาวชนัญชิดา พาวขุนทด,ร.ต.อ.พิชิต ภูมิสุวรรณ์ ,,,,,
+พญาไท,5,นายพีระพัฒน์ ทองใบ,ร.ต.ต.นพรัตน์ โคยามา ,,,,,
+พญาไท,6,นางสาวนริสรา พรหมลิ,ด.ต.ณรงค์ศักดิ์ จงพิทักษ์ ,,,,,
+พญาไท,7,นางสาวณัฐวรรณ อินทรส,จ.ส.ต.ภานุพงศ์ นาคำ ,,,,,
+พญาไท,8,นางสาวขวัญชนก โชติโรจน์,ส.ต.ต.วัฒนา พูนอยู่ ,,,,,
+พญาไท,9,นายวิภัตย์ ธรฤทธิ์,ส.ต.อ.อรรถพล ยิ้มแย้ม ,,,,,
+พญาไท,10,นางสาวจุฑามาศ จันทรศารทูล,ส.ต.ต.ราชันย์ ปุราชะทำมัง ,ส.ต.ต.รติชนน์ ต่างประเทศ,,,,
+พญาไท,11,นางสาวรติภรณ์ สังขวิจิตร,ส.ต.อ.จิรภิญโญ ไชยบุญทัน ,ส.ต.ต.แสงอรุณ จ่างเจริญ,,,,
+พญาไท,12,นางสาวณดาพัณ บุญรอด,ส.ต.อ.กิตติพศ ยศวิจิตร ,,,,,
+พญาไท,13,นางสาวอิสรา วะลิวงศ์,ส.ต.ต.ธรรมนูญ นันทจิตร ,,,,,
+พญาไท,14,นายนิรุธ อ่อนหัวโทน,ส.ต.ต.อภินันท์ วิชัยวงษ์ ,ด.ต.จิรานุวัฒน์ ทิพย์แก้ว,,,,
+พญาไท,15,นางสาวกาญจนา ทัดบัวขำ,ส.ต.ต.นิธิพงษ์ สถานพงษ์ ,,,,,
+พญาไท,16,นางสาววิชญาพร ชูสุทธิ์,ส.ต.อ.ศักดิ์ดา ตันโห ,,,,,
+พญาไท,17,นายชัยวัฒน์ เต้าสุวรรณ,ส.ต.ต.นพดล ง้วนสกุล ,,,,,
+พญาไท,18,นายสุริยา แก้วพวง,ส.ต.ท.วิศวะ พินิจวิญญภาพ ,,,,,
+พญาไท,19,นายกฤษฎากร โอภากุล,ส.ต.ท.ปัณณทัต เงินเต็ม ,,,,,
+พญาไท,20,นางสาวชนิสรา วงค์เฟื่องทำ,ส.ต.อ.ชลธิศ จันทร์หมื่น ,,,,,
+พญาไท,21,นางสาวอังคณา หลักตา,ส.ต.ท.นทีธร จูเจริญ ,,,,,
+พญาไท,22,นางสาวจิรัฐิติกาล ห้าวหาญ,ส.ต.อ.รัชชานนท์ สายสิม ,,,,,
+พญาไท,23,นางสาวจุฑาทิพ เล่ห์บุญ,ร.ต.ต.ไพโรจน์ ไทยเหียม ,,,,,
+พญาไท,24,นางธนิษฐา เล็กสิงห์โต,ร.ต.ต.ชัยยะกานต์ ชัยยะไพบูรณ์,,,,,
+พญาไท,25,นางสาวนัยนา บุญเกิน,ร.ต.ต.วิชาญ ฤทธิวงศ์ ,,,,,
+พญาไท,26,ว่าที่ ร.ต.ชัชวาลย์ คำงาม,ร.ต.ท.ธนันวัฒน์ พงศ์วรชานนท์ ,,,,,
+พญาไท,27,นายธนพล ยาทอง,ร.ต.ท.สมพร วันศุกร์,,,,,
+พญาไท,28,นางสาววรนุช จุ่นหัวโทน,จ.ส.ต.กฤษฎา พรมชัย ,,,,,
+พญาไท,29,นางสาวมริศรา แก้วโสภา,จ.ส.ต.นิรันดร์ สามหมอ ,ส.ต.ต.ณัฐพล ระวังกาย,,,,
+พญาไท,30,นางสาวสุภาพร บุตรจันทร์,ร.ต.อ.สิทธิพล หิรัญกุล ,ส.ต.อ.ศักรินทร์ ยิ่งคำนุ่น,,,,
+พญาไท,31,นางสาวพัชรินทร์ กุนศิลา,ส.ต.อ.ภานุเดช คชาทอง ,จ.ส.ต.ปรรณพัชร์ บัวแก้ว,,,,
+พญาไท,32,นางสาวกิ่งกาญจน์ จำรูญพงษ์,ร.ต.อ.คำดี เหล่าเขตกิจ ,ส.ต.อ.สิทธินนท์ นาคำ,,,,
+พญาไท,33,นางสาวรัตนจิตต์ สงวนจินต์,จ.ส.ต.สุระ หมื่นอ่อน ,ส.ต.ท.ปริวรรต ศรีษะภูมิ,,,,
+พญาไท,34,นายปฏิพัทธ์ แผ่นทอง,ส.ต.อ.ภานุพงศ์ กมลเสถียร ,,,,,
+พญาไท,35,นางปฐมาภรณ์ จันทร์สุดา,ส.ต.ท.วิพุธ  ธราดำรงณ์ ,,,,,
+พญาไท,36,นางสาวอรพิน จันทะวงค์,ร.ต.อ.สมพงษ์  เอี่ยมศิริ ,,,,,
+พญาไท,37,นางสาวสุภารัตน์ ระยับศรี,ร.ต.ต.เชิดชัย  กรุดประเสริฐ ,,,,,
+พญาไท,38,นางสาวมัญชรี ทีปนะ,จ.ส.ต.วรวุธ  กันทะวา ,ส.ต.ต.ชนม์สวัสดิ์ พิมพิบาล,,,,
+พญาไท,39,นางสาวปนัดดา ย่องมณี,ส.ต.ท.ศุภกร พรมเมืองคุก ,ส.ต.ต.พงศ์พล กมลวรรณเลิศ,,,,
+พญาไท,40,นางสาววราภรณ์ แสงมูล,จ.ส.ต.จักรพงศ์  ตีบไธสง ,ส.ต.ต.ธนาธิป สุขุมานันท์,,,,
+พญาไท,41,นายพชร หนูศรีใส,ด.ต.ศักดิ์ดา ฝ่ายจตุรัด ,,,,,
+พญาไท,42,นางสาวมาไล กรรณีวงษ์,ส.ต.ต.สหภาพ วงคำสิทธิ์ ,,,,,`;
+
+        let appState = {
+            officers: [],
+            attendance: {}, 
+            isAdmin: false,
+            totalUnits: 0,
+            samsenTotalUnits: 0,
+            phayathaiTotalUnits: 0
+        };
+
+        function init() {
+            parseData();
+            loadLocalStorage();
+            lucide.createIcons();
+            renderAll();
+        }
+
+        function parseData() {
+            const lines = csvData.trim().split('\n');
+            let sUnits = 0;
+            let pUnits = 0;
+            
+            for (let i = 1; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) continue;
+                
+                const cols = line.split(',');
+                const district = cols[0] ? cols[0].trim() : '';
+                const unit = cols[1] ? cols[1].trim() : '';
+                
+                if (district && unit) {
+                    const unitId = `${district}-${unit}`;
+                    const pName = cols[2] ? cols[2].trim() : '';
+                    const s1Name = cols[3] ? cols[3].trim() : '';
+                    const s2Name = cols[4] ? cols[4].trim() : '';
+
+                    let unitTotal = 0;
+                    if(pName) unitTotal++;
+                    if(s1Name) unitTotal++;
+                    if(s2Name) unitTotal++;
+
+                    if(district === 'สามเสนใน') sUnits++;
+                    if(district === 'พญาไท') pUnits++;
+
+                    appState.officers.push({
+                        id: unitId,
+                        district,
+                        unit: parseInt(unit),
+                        president: pName,
+                        sec1: s1Name,
+                        sec2: s2Name,
+                        totalMembers: unitTotal
+                    });
+                }
+            }
+            appState.samsenTotalUnits = sUnits;
+            appState.phayathaiTotalUnits = pUnits;
+            appState.totalUnits = sUnits + pUnits;
+        }
+
+        function loadLocalStorage() {
+            const saved = localStorage.getItem('election_attendance_data');
+            if (saved) {
+                appState.attendance = JSON.parse(saved);
+            }
+            updateStats();
+        }
+
+        function saveLocalStorage() {
+            localStorage.setItem('election_attendance_data', JSON.stringify(appState.attendance));
+            updateStats();
+        }
+
+        function createCheckboxHTML(item, roleCode, name, allChecked) {
+            if(!name) return '<div class="flex-1"></div>'; // Empty space to keep layout aligned
+            
+            const personId = `${item.id}-${roleCode}`;
+            const isChecked = appState.attendance[personId] === true;
+            const disabledAttr = appState.isAdmin ? '' : 'disabled';
+            const cursorClass = appState.isAdmin ? 'cursor-pointer hover:opacity-80' : 'cursor-default';
+            
+            // สีของตัวอักษร: ถ้าครบทุกคนในแถว=ขาว, ถ้าติ๊ก=เขียว, ถ้ายังไม่ติ๊ก=เทา
+            let textClass = 'text-gray-600';
+            if (allChecked) textClass = 'text-white font-medium';
+            else if (isChecked) textClass = 'text-emerald-600 font-bold';
+
+            return `
+                <label class="flex-1 flex items-center gap-1 overflow-hidden ${cursorClass}" title="${name}">
+                    <input type="checkbox" class="shrink-0 w-3 h-3 md:w-3.5 md:h-3.5 rounded border-gray-300 focus:ring-0 ${appState.isAdmin ? 'cursor-pointer' : ''}" 
+                        ${isChecked ? 'checked' : ''} 
+                        ${disabledAttr}
+                        onchange="toggleAttendance('${personId}', this.checked)">
+                    <span class="truncate text-[10px] md:text-xs xl:text-sm ${textClass} leading-tight">${name}</span>
+                </label>
+            `;
+        }
+
+        function renderAll() {
+            const containerSamsen = document.getElementById('list-samsen');
+            const containerPhayathai = document.getElementById('list-phayathai');
+            
+            containerSamsen.innerHTML = '';
+            containerPhayathai.innerHTML = '';
+
+            let samsenCompletedUnits = 0;
+            let phayathaiCompletedUnits = 0;
+
+            appState.officers.forEach(item => {
+                // เช็คยอดคนมาของหน่วยนี้
+                let checkedMembers = 0;
+                if(item.president && appState.attendance[`${item.id}-p`]) { checkedMembers++; }
+                if(item.sec1 && appState.attendance[`${item.id}-s1`]) { checkedMembers++; }
+                if(item.sec2 && appState.attendance[`${item.id}-s2`]) { checkedMembers++; }
+
+                const isAllChecked = (item.totalMembers > 0 && checkedMembers === item.totalMembers);
+                
+                if (isAllChecked) {
+                    if (item.district === 'สามเสนใน') samsenCompletedUnits++;
+                    else phayathaiCompletedUnits++;
+                }
+
+                // ตกแต่งสีพื้นหลังแถว ถ้าครบทุกคนให้เป็นสีเขียว Emerald
+                const rowBg = isAllChecked 
+                    ? 'bg-emerald-500 border border-emerald-600 shadow-sm z-10 scale-[1.01] rounded' 
+                    : 'bg-white border-b border-gray-200 hover:bg-purple-50';
+
+                // ตกแต่งป้ายตัวเลขหน่วย
+                const unitBg = isAllChecked 
+                    ? 'bg-emerald-600/50 text-white border-r border-emerald-400' 
+                    : 'bg-purple-100 text-purple-800 border-r border-purple-200';
+
+                const rowHtml = `
+                    <div class="flex items-stretch transition-all duration-300 ${rowBg} flex-none min-h-[32px] lg:flex-1 lg:min-h-0 overflow-hidden">
+                        <div class="w-12 sm:w-14 flex items-center justify-center font-bold text-xs shrink-0 ${unitBg}">
+                            น. ${item.unit}
+                        </div>
+                        <div class="flex-1 flex items-center px-1.5 md:px-2 gap-1 overflow-hidden">
+                            ${createCheckboxHTML(item, 'p', item.president, isAllChecked)}
+                            ${createCheckboxHTML(item, 's1', item.sec1, isAllChecked)}
+                            ${createCheckboxHTML(item, 's2', item.sec2, isAllChecked)}
+                        </div>
+                    </div>
+                `;
+
+                if (item.district === 'สามเสนใน') {
+                    containerSamsen.insertAdjacentHTML('beforeend', rowHtml);
+                } else {
+                    containerPhayathai.insertAdjacentHTML('beforeend', rowHtml);
+                }
+            });
+
+            document.getElementById('stat-samsen').textContent = `${samsenCompletedUnits}/${appState.samsenTotalUnits} หน่วย`;
+            document.getElementById('stat-phayathai').textContent = `${phayathaiCompletedUnits}/${appState.phayathaiTotalUnits} หน่วย`;
+        }
+
+        function toggleAttendance(personId, isChecked) {
+            if (!appState.isAdmin) return;
+            
+            if (isChecked) {
+                appState.attendance[personId] = true;
+            } else {
+                delete appState.attendance[personId];
+            }
+            
+            saveLocalStorage();
+            renderAll(); // อัปเดตตารางใหม่เพื่อแสดงสีเขียวกรณีครบทุกคน
+        }
+
+        function updateStats() {
+            let completedUnits = 0;
+            appState.officers.forEach(item => {
+                let checkedMembers = 0;
+                if(item.president && appState.attendance[`${item.id}-p`]) { checkedMembers++; }
+                if(item.sec1 && appState.attendance[`${item.id}-s1`]) { checkedMembers++; }
+                if(item.sec2 && appState.attendance[`${item.id}-s2`]) { checkedMembers++; }
+                if(item.totalMembers > 0 && checkedMembers === item.totalMembers) {
+                    completedUnits++;
+                }
+            });
+            document.getElementById('arrived-count').textContent = completedUnits;
+            document.getElementById('total-count').textContent = appState.totalUnits;
+        }
+
+        /* --- ระบบ Login Modal --- */
+        function showModal(id) {
+            document.getElementById(`modal-${id}`).classList.remove('hidden');
+            if (id === 'login') {
+                document.getElementById('login-password').value = '';
+                document.getElementById('login-error').classList.add('hidden');
+                setTimeout(() => document.getElementById('login-password').focus(), 100);
+            }
+        }
+
+        function hideModal(id) {
+            document.getElementById(`modal-${id}`).classList.add('hidden');
+        }
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const pwd = document.getElementById('login-password').value.trim();
+            const err = document.getElementById('login-error');
+            
+            if (pwd === '0000') {
+                appState.isAdmin = true;
+                hideModal('login');
+                updateUIState();
+                renderAll(); // รีเฟรชเพื่อปลดล็อก Checkbox ให้กดได้
+            } else {
+                err.classList.remove('hidden');
+            }
+        }
+
+        function logout() {
+            appState.isAdmin = false;
+            updateUIState();
+            renderAll(); 
+        }
+
+        function updateUIState() {
+            const btnLogin = document.getElementById('btn-login');
+            const btnLogout = document.getElementById('btn-logout');
+            const adminBanner = document.getElementById('admin-banner');
+
+            if (appState.isAdmin) {
+                btnLogin.classList.add('hidden');
+                btnLogin.classList.remove('flex');
+                btnLogout.classList.remove('hidden');
+                btnLogout.classList.add('flex');
+                adminBanner.classList.remove('hidden');
+            } else {
+                btnLogin.classList.remove('hidden');
+                btnLogin.classList.add('flex');
+                btnLogout.classList.add('hidden');
+                btnLogout.classList.remove('flex');
+                adminBanner.classList.add('hidden');
+            }
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
